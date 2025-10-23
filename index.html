@@ -157,7 +157,7 @@ async function loadCalendar() {
 }
 async function addEvent() {
   const date = document.getElementById('eventDate').value;
-  const title = document.getElementById('eventText').value;
+  const title = document.getElementById('eventTitle').value;
 
   if (!date || !title) {
     alert("Por favor, preencha a data e o nome do evento 💕");
@@ -172,8 +172,8 @@ async function addEvent() {
   const result = await response.json();
   if (result.success) {
     alert("Evento adicionado com sucesso! 💖");
-    document.getElementById('eventText').value = '';
-    await loadEvents(); // Atualiza o calendário imediatamente
+    document.getElementById('eventTitle').value = '';
+    await loadCalendar(); // Atualiza o calendário imediatamente
   } else {
     alert("Houve um problema ao adicionar o evento 😢");
   }
@@ -184,6 +184,7 @@ loadCalendar();
 </script>
 </body>
 </html>
+
 
 
 
