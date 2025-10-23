@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R & M 💕</title>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(180deg, #ffd6e7, #fff);
+      color: #444;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+    h1 {
+      color: #e75480;
+      margin-top: 20px;
+    }
+    .section {
+      background: #fff;
+      border-radius: 16px;
+      margin: 20px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin: 5px;
+    }
+    button {
+      background-color: #e75480;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    li.done {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .day {
+      padding: 10px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+    .event-day {
+      background-color: #e75480;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>R & M 💕</h1>
+
+  <div class="section">
+    <h2>💌 Nossos Planos</h2>
+    <input id="newItem" type="text" placeholder="Digite um plano...">
+    <button onclick="addItem()">Adicionar</button>
+    <ul id="itemList"></ul>
+  </div>
+
+  <div class="section">
+    <h2>📅 Nossa Agenda</h2>
+    <div id="calendar"></div>
+    <input id="eventTitle" placeholder="Descrição do evento">
+    <input id="eventDate" type="date">
+    <button onclick="addEvent()">Adicionar Evento</button>
+  </div>
+
+<script>
+const scriptURL = "https://script.google.com/macros/s/AKfycbyBtzblDEfweE6F946tXooocmzD3CzQOrew7XUwiIl_PT_tXgBcL1HhAWynU4j3dDr5/exec";
+const token = "R&M_2025";
+
+async function post(action, data={}) {
+  data.action = action;
+  data.token = token;
+  const res = await fetch(scriptURL, {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+}
+
+// LISTA
+async function loadItems() {
+  const items = await post("getItems");
+  const list = document.getElementById("itemList");
+  list.innerHTML = "";
+  items.forEach(item => {
+    const li = document.createElement("li");
+    li.className = item.done ? "done" : "";
+    li.innerHTML = `
+      <span>${item.text}</span>
+      <div>
+        <button onclick="toggleItem('${item.id}')">✓</button>
+        <button onclick="deleteItem('${item.id}')">🗑</button>
+      </div>`;
+    list.appendChild(li);
+  });
+}
+async function addItem() {
+  const text = document.getElementById("newItem").value.trim();
+  if (!text) return;
+  await post("addItem", { text });
+  document.getElementById("newItem").value = "";
+  loadItems();
+}
+async function toggleItem(id) {
+  await post("toggleItem", { id });
+  loadItems();
+}
+async function deleteItem(id) {
+  await post("deleteItem", { id });
+  loadItems();
+}
+
+// AGENDA
+async function loadCalendar() {
+  const events = await post("getEvents");
+  const today = new Date();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+  const calendar = document.getElementById("calendar");
+  calendar.innerHTML = "";
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const div = document.createElement("div");
+    div.className = "day" + (events.some(e => e.date === date) ? " event-day" : "");
+    div.innerText = d;
+    div.onclick = () => {
+      const dayEvents = events.filter(e => e.date === date);
+      alert(dayEvents.length ? dayEvents.map(e => "💖 " + e.title).join("\n") : "Sem eventos neste dia 💭");
+    };
+    calendar.appendChild(div);
+  }
+}
+async function addEvent() {
+  const title = document.getElementById("eventTitle").value.trim();
+  const date = document.getElementById("eventDate").value;
+  if (!title || !date) return;
+  await post("addEvent", { title, date });
+  document.getElementById("eventTitle").value = "";
+  loadCalendar();
+}
+
+loadItems();
+loadCalendar();
+</script>
+</body>
+</html>
