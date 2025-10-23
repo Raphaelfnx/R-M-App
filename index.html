@@ -82,14 +82,23 @@
   </div>
 
   <div class="section">
-    <h2>📅 Nossa Agenda</h2>
-    <div id="calendar"></div>
-    <input id="eventTitle" placeholder="Descrição do evento">
-    <input id="eventDate" type="date">
-    <button onclick="addEvent()">Adicionar Evento</button>
-  </div>
+    <h2>📅 Nossa Agenda</h2>
+    
+    <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 10px;">
+        <button onclick="changeMonth(-1)">← Anterior</button>
+        <h3 id="monthTitle" style="color: #e75480; margin: 0;"></h3> 
+        <button onclick="changeMonth(1)">Próximo →</button>
+    </div>
+
+    <div id="calendar" class="calendar"></div>     <input id="eventTitle" placeholder="Descrição do evento">
+    <input id="eventDate" type="date">
+    <button onclick="addEvent()">Adicionar Evento</button>
+</div>
 
 <script>
+// Variável para rastrear o mês atual sendo exibido
+let currentDisplayDate = new Date();
+  
 const scriptURL = "https://script.google.com/macros/s/AKfycbxJ-UfHesXpp95mA6TAS3I8iDNUq3RJXIj2DcAliCNS0_kptuqsu5TvmQB1srpnACDe/exec";
 const token = "R&M_2025";
 
@@ -136,18 +145,38 @@ async function deleteItem(id) {
   loadItems();
 }
 
+// VARIÁVEL GLOBAL JÁ ESTÁ NO TOPO: let currentDisplayDate = new Date();
+
+// NOVA FUNÇÃO: Muda o mês de referência e recarrega o calendário
+function changeMonth(delta) {
+    // Muda o mês da data de referência
+    currentDisplayDate.setMonth(currentDisplayDate.getMonth() + delta);
+    loadCalendar();
+}
+
 // AGENDA
-// AGENDA
+// Modificação de loadCalendar() para usar a data de referência
 async function loadCalendar() {
-    // A função 'post' já usa o Apps Script corrigido para formatar a data
-    const events = await post("getEvents"); 
-    const today = new Date();
-    // Pega o último dia do Mês Atual (não do mês do evento)
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate(); 
+    const events = await post("getEvents");
+    
+    // Agora usa a data de referência para carregar o mês
+    const referenceDate = currentDisplayDate; 
+    
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth(); // 0-based
+    
+    // Título do Mês
+    const monthName = referenceDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    document.getElementById("monthTitle").innerText = monthName.toUpperCase();
+    
+    // Cálculo dos dias
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay(); // Dia da semana do 1º dia (0=Dom, 6=Sáb)
+    
     const calendar = document.getElementById("calendar");
     calendar.innerHTML = "";
     
-    // Nomes dos dias da semana para o cabeçalho (Opcional, mas útil)
+    // Cabeçalho dos Dias da Semana (Layout Fixo)
     const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
     dayNames.forEach(name => {
         const header = document.createElement("div");
@@ -155,36 +184,33 @@ async function loadCalendar() {
         header.innerText = name;
         calendar.appendChild(header);
     });
-
-    // Encontra o primeiro dia do mês para alinhar corretamente
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+    
+    // Espaços Vazios para Alinhar o 1º Dia
     for (let i = 0; i < firstDay; i++) {
-        calendar.appendChild(document.createElement("div")); // Espaços vazios
+        calendar.appendChild(document.createElement("div"));
     }
-
+    
+    // Preenchimento dos Dias do Mês
     for (let d = 1; d <= daysInMonth; d++) {
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(d).padStart(2, '0');
-        const date = `${year}-${month}-${day}`;
+        // Formato YYYY-MM-DD para comparação com os eventos do Apps Script
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         
         const div = document.createElement("div");
-        const dayEvents = events.filter(e => e.date === date);
+        const dayEvents = events.filter(e => e.date === dateStr);
 
+        // Aplica a classe de destaque se houver eventos
         div.className = "day" + (dayEvents.length ? " event-day" : "");
         div.innerText = d;
         
         div.onclick = () => {
             if (dayEvents.length) {
-                let message = `Eventos em ${day}/${month}:\n\n`;
+                let message = `Eventos em ${d}/${String(month + 1).padStart(2, '0')}/${year}:\n\n`;
                 dayEvents.forEach(e => {
-                    // Adiciona o evento e um comando de exclusão simples
-                    message += `💖 ${e.title} (ID: ${e.id})\n`; 
+                    message += `💖 ${e.title}\n`; 
                 });
                 
-                // Opção 1: Mostrar ID e pedir confirmação para excluir o primeiro
-                const eventToDelete = dayEvents[0]; // Simplificando para excluir o primeiro
-
+                const eventToDelete = dayEvents[0]; // Pega o primeiro evento
+                
                 const confirmation = confirm(`${message}\n\nVocê tem ${dayEvents.length} evento(s) neste dia. Deseja excluir o evento: "${eventToDelete.title}"?`);
 
                 if (confirmation) {
@@ -197,6 +223,7 @@ async function loadCalendar() {
         calendar.appendChild(div);
     }
 }
+  
 async function addEvent() {
   const date = document.getElementById('eventDate').value;
   const title = document.getElementById('eventTitle').value;
@@ -242,6 +269,7 @@ loadCalendar();
 </script>
 </body>
 </html>
+
 
 
 
