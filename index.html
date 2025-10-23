@@ -137,23 +137,65 @@ async function deleteItem(id) {
 }
 
 // AGENDA
+// AGENDA
 async function loadCalendar() {
-  const events = await post("getEvents");
-  const today = new Date();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
-  const calendar = document.getElementById("calendar");
-  calendar.innerHTML = "";
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const div = document.createElement("div");
-    div.className = "day" + (events.some(e => e.date === date) ? " event-day" : "");
-    div.innerText = d;
-    div.onclick = () => {
-      const dayEvents = events.filter(e => e.date === date);
-      alert(dayEvents.length ? dayEvents.map(e => "💖 " + e.title).join("\n") : "Sem eventos neste dia 💭");
-    };
-    calendar.appendChild(div);
-  }
+    // A função 'post' já usa o Apps Script corrigido para formatar a data
+    const events = await post("getEvents"); 
+    const today = new Date();
+    // Pega o último dia do Mês Atual (não do mês do evento)
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate(); 
+    const calendar = document.getElementById("calendar");
+    calendar.innerHTML = "";
+    
+    // Nomes dos dias da semana para o cabeçalho (Opcional, mas útil)
+    const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    dayNames.forEach(name => {
+        const header = document.createElement("div");
+        header.style.fontWeight = 'bold';
+        header.innerText = name;
+        calendar.appendChild(header);
+    });
+
+    // Encontra o primeiro dia do mês para alinhar corretamente
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
+    for (let i = 0; i < firstDay; i++) {
+        calendar.appendChild(document.createElement("div")); // Espaços vazios
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(d).padStart(2, '0');
+        const date = `${year}-${month}-${day}`;
+        
+        const div = document.createElement("div");
+        const dayEvents = events.filter(e => e.date === date);
+
+        div.className = "day" + (dayEvents.length ? " event-day" : "");
+        div.innerText = d;
+        
+        div.onclick = () => {
+            if (dayEvents.length) {
+                let message = `Eventos em ${day}/${month}:\n\n`;
+                dayEvents.forEach(e => {
+                    // Adiciona o evento e um comando de exclusão simples
+                    message += `💖 ${e.title} (ID: ${e.id})\n`; 
+                });
+                
+                // Opção 1: Mostrar ID e pedir confirmação para excluir o primeiro
+                const eventToDelete = dayEvents[0]; // Simplificando para excluir o primeiro
+
+                const confirmation = confirm(`${message}\n\nVocê tem ${dayEvents.length} evento(s) neste dia. Deseja excluir o evento: "${eventToDelete.title}"?`);
+
+                if (confirmation) {
+                    deleteEvent(eventToDelete.id);
+                }
+            } else {
+                alert("Sem eventos neste dia 💭");
+            }
+        };
+        calendar.appendChild(div);
+    }
 }
 async function addEvent() {
   const date = document.getElementById('eventDate').value;
@@ -179,11 +221,28 @@ async function addEvent() {
   }
 }
 
+async function deleteEvent(id) {
+    if (!confirm("Tem certeza que deseja excluir este evento? 😢")) {
+        return;
+    }
+    
+    const response = await post("deleteEvent", { id });
+    
+    if (response.success) {
+        alert("Evento excluído com sucesso! ✅");
+        // Recarrega o calendário para remover o destaque
+        await loadCalendar(); 
+    } else {
+        alert("Houve um problema ao excluir o evento 😔");
+    }
+}
+
 loadItems();
 loadCalendar();
 </script>
 </body>
 </html>
+
 
 
 
