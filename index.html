@@ -69,6 +69,16 @@
       color: white;
       font-weight: bold;
     }
+
+    #eventListContainer li {
+    border-bottom: 1px dashed #ffd6e7;
+    padding: 10px 5px;
+    color: #555;
+    }
+
+    #eventListContainer li:last-child {
+    border-bottom: none;
+    }
   </style>
 </head>
 <body>
@@ -93,6 +103,13 @@
     <div id="calendar" class="calendar"></div>     <input id="eventTitle" placeholder="Descrição do evento">
     <input id="eventDate" type="date">
     <button onclick="addEvent()">Adicionar Evento</button>
+
+    <button onclick="addEvent()">Adicionar Evento</button>
+
+    <div style="margin-top: 20px; text-align: left;">
+    <h3 style="color: #e75480; border-bottom: 2px solid #ffd6e7; padding-bottom: 5px;">Lista de Eventos</h3>
+    <ul id="eventListContainer"></ul>
+    </div>
 </div>
 
 <script>
@@ -222,6 +239,27 @@ async function loadCalendar() {
         };
         calendar.appendChild(div);
     }
+  // --- NOVO TRECHO PARA A LISTA DE EVENTOS ---
+  const listContainer = document.getElementById("eventListContainer");
+  listContainer.innerHTML = ""; // Limpa a lista antes de carregar
+
+  if (events.length === 0) {
+      listContainer.innerHTML = "<li>Nenhum evento marcado ainda 🌸</li>";
+  } else {
+    // Ordena os eventos por data antes de exibir
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    events.forEach(e => {
+        const [year, month, day] = e.date.split('-');
+        const li = document.createElement("li");
+        li.style.fontSize = "0.9em";
+        li.innerHTML = `
+          <span><strong>${day}/${month}</strong>: ${e.title}</span>
+          <button style="padding: 2px 8px; font-size: 0.8em;" onclick="deleteEvent('${e.id}')">🗑</button>
+        `;
+        listContainer.appendChild(li);
+    });
+  }
 }
   
 async function addEvent() {
