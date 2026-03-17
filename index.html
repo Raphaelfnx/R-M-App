@@ -69,15 +69,22 @@
       color: white;
       font-weight: bold;
     }
-
+    /* Estilos para a nova lista de eventos */
     #eventListContainer li {
-    border-bottom: 1px dashed #ffd6e7;
-    padding: 10px 5px;
-    color: #555;
+      border-bottom: 1px dashed #ffd6e7;
+      padding: 10px 5px;
+      color: #555;
+      font-size: 0.9em;
     }
-
     #eventListContainer li:last-child {
-    border-bottom: none;
+      border-bottom: none;
+    }
+    .list-title {
+      color: #e75480; 
+      border-bottom: 2px solid #ffd6e7; 
+      padding-bottom: 5px; 
+      margin-top: 25px;
+      text-align: left;
     }
   </style>
 </head>
@@ -92,30 +99,30 @@
   </div>
 
   <div class="section">
-    <h2>📅 Nossa Agenda</h2>
-    
+    <h2>📅 Nossa Agenda</h2>
+    
     <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 10px;">
         <button onclick="changeMonth(-1)">← Anterior</button>
         <h3 id="monthTitle" style="color: #e75480; margin: 0;"></h3> 
         <button onclick="changeMonth(1)">Próximo →</button>
     </div>
 
-    <div id="calendar" class="calendar"></div>     <input id="eventTitle" placeholder="Descrição do evento">
-    <input id="eventDate" type="date">
-    <button onclick="addEvent()">Adicionar Evento</button>
+    <div id="calendar" class="calendar"></div>
 
-    <button onclick="addEvent()">Adicionar Evento</button>
+    <div style="margin-top: 20px;">
+        <input id="eventTitle" placeholder="Descrição do evento">
+        <input id="eventDate" type="date">
+        <button onclick="addEvent()">Adicionar Evento</button>
+    </div>
 
-    <div style="margin-top: 20px; text-align: left;">
-    <h3 style="color: #e75480; border-bottom: 2px solid #ffd6e7; padding-bottom: 5px;">Lista de Eventos</h3>
-    <ul id="eventListContainer"></ul>
+    <div style="text-align: left;">
+        <h3 class="list-title">Lista de Eventos</h3>
+        <ul id="eventListContainer"></ul>
     </div>
 </div>
 
 <script>
-// Variável para rastrear o mês atual sendo exibido
 let currentDisplayDate = new Date();
-  
 const scriptURL = "https://script.google.com/macros/s/AKfycbxJ-UfHesXpp95mA6TAS3I8iDNUq3RJXIj2DcAliCNS0_kptuqsu5TvmQB1srpnACDe/exec";
 const token = "R&M_2025";
 
@@ -129,7 +136,7 @@ async function post(action, data={}) {
   return await res.json();
 }
 
-// LISTA
+// LISTA DE PLANOS
 async function loadItems() {
   const items = await post("getItems");
   const list = document.getElementById("itemList");
@@ -146,6 +153,7 @@ async function loadItems() {
     list.appendChild(li);
   });
 }
+
 async function addItem() {
   const text = document.getElementById("newItem").value.trim();
   if (!text) return;
@@ -153,47 +161,38 @@ async function addItem() {
   document.getElementById("newItem").value = "";
   loadItems();
 }
+
 async function toggleItem(id) {
   await post("toggleItem", { id });
   loadItems();
 }
+
 async function deleteItem(id) {
   await post("deleteItem", { id });
   loadItems();
 }
 
-// VARIÁVEL GLOBAL JÁ ESTÁ NO TOPO: let currentDisplayDate = new Date();
-
-// NOVA FUNÇÃO: Muda o mês de referência e recarrega o calendário
+// AGENDA E CALENDÁRIO
 function changeMonth(delta) {
-    // Muda o mês da data de referência
     currentDisplayDate.setMonth(currentDisplayDate.getMonth() + delta);
     loadCalendar();
 }
 
-// AGENDA
-// Modificação de loadCalendar() para usar a data de referência
 async function loadCalendar() {
     const events = await post("getEvents");
-    
-    // Agora usa a data de referência para carregar o mês
-    const referenceDate = currentDisplayDate; 
-    
+    const referenceDate = currentDisplayDate;
     const year = referenceDate.getFullYear();
-    const month = referenceDate.getMonth(); // 0-based
+    const month = referenceDate.getMonth();
     
-    // Título do Mês
     const monthName = referenceDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     document.getElementById("monthTitle").innerText = monthName.toUpperCase();
     
-    // Cálculo dos dias
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDay = new Date(year, month, 1).getDay(); // Dia da semana do 1º dia (0=Dom, 6=Sáb)
+    const firstDay = new Date(year, month, 1).getDay();
     
     const calendar = document.getElementById("calendar");
     calendar.innerHTML = "";
     
-    // Cabeçalho dos Dias da Semana (Layout Fixo)
     const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
     dayNames.forEach(name => {
         const header = document.createElement("div");
@@ -201,102 +200,78 @@ async function loadCalendar() {
         header.innerText = name;
         calendar.appendChild(header);
     });
-    
-    // Espaços Vazios para Alinhar o 1º Dia
+
     for (let i = 0; i < firstDay; i++) {
         calendar.appendChild(document.createElement("div"));
     }
     
-    // Preenchimento dos Dias do Mês
     for (let d = 1; d <= daysInMonth; d++) {
-        // Formato YYYY-MM-DD para comparação com os eventos do Apps Script
         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        
         const div = document.createElement("div");
         const dayEvents = events.filter(e => e.date === dateStr);
-
-        // Aplica a classe de destaque se houver eventos
+        
         div.className = "day" + (dayEvents.length ? " event-day" : "");
         div.innerText = d;
         
         div.onclick = () => {
             if (dayEvents.length) {
                 let message = `Eventos em ${d}/${String(month + 1).padStart(2, '0')}/${year}:\n\n`;
-                dayEvents.forEach(e => {
-                    message += `💖 ${e.title}\n`; 
-                });
-                
-                const eventToDelete = dayEvents[0]; // Pega o primeiro evento
-                
-                const confirmation = confirm(`${message}\n\nVocê tem ${dayEvents.length} evento(s) neste dia. Deseja excluir o evento: "${eventToDelete.title}"?`);
-
-                if (confirmation) {
-                    deleteEvent(eventToDelete.id);
-                }
+                dayEvents.forEach(e => { message += `💖 ${e.title}\n`; });
+                const eventToDelete = dayEvents[0];
+                const confirmation = confirm(`${message}\n\nDeseja excluir o evento: "${eventToDelete.title}"?`);
+                if (confirmation) deleteEvent(eventToDelete.id);
             } else {
                 alert("Sem eventos neste dia 💭");
             }
         };
         calendar.appendChild(div);
     }
-  // --- NOVO TRECHO PARA A LISTA DE EVENTOS ---
-  const listContainer = document.getElementById("eventListContainer");
-  listContainer.innerHTML = ""; // Limpa a lista antes de carregar
 
-  if (events.length === 0) {
-      listContainer.innerHTML = "<li>Nenhum evento marcado ainda 🌸</li>";
-  } else {
-    // Ordena os eventos por data antes de exibir
-    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // ATUALIZAÇÃO DA LISTA TEXTUAL DE EVENTOS
+    const listContainer = document.getElementById("eventListContainer");
+    listContainer.innerHTML = "";
 
-    events.forEach(e => {
-        const [year, month, day] = e.date.split('-');
-        const li = document.createElement("li");
-        li.style.fontSize = "0.9em";
-        li.innerHTML = `
-          <span><strong>${day}/${month}</strong>: ${e.title}</span>
-          <button style="padding: 2px 8px; font-size: 0.8em;" onclick="deleteEvent('${e.id}')">🗑</button>
-        `;
-        listContainer.appendChild(li);
-    });
-  }
+    if (events.length === 0) {
+        listContainer.innerHTML = "<li>Nenhum evento marcado ainda 🌸</li>";
+    } else {
+        // Ordena por data (mais próximos primeiro)
+        events.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        events.forEach(e => {
+            const [y, m, day] = e.date.split('-');
+            const li = document.createElement("li");
+            li.innerHTML = `
+              <span><strong>${day}/${m}</strong>: ${e.title}</span>
+              <button style="padding: 2px 8px; font-size: 0.8em;" onclick="deleteEvent('${e.id}')">🗑</button>
+            `;
+            listContainer.appendChild(li);
+        });
+    }
 }
   
 async function addEvent() {
   const date = document.getElementById('eventDate').value;
   const title = document.getElementById('eventTitle').value;
-
   if (!date || !title) {
     alert("Por favor, preencha a data e o nome do evento 💕");
     return;
   }
-
-  const response = await fetch(scriptURL, {
-    method: 'POST',
-    body: JSON.stringify({ token, action: 'addEvent', date, title })
-  });
-  
-  const result = await response.json();
-  if (result.success) {
+  const response = await post("addEvent", { date, title });
+  if (response.success) {
     alert("Evento adicionado com sucesso! 💖");
     document.getElementById('eventTitle').value = '';
-    await loadCalendar(); // Atualiza o calendário imediatamente
+    await loadCalendar();
   } else {
     alert("Houve um problema ao adicionar o evento 😢");
   }
 }
 
 async function deleteEvent(id) {
-    if (!confirm("Tem certeza que deseja excluir este evento? 😢")) {
-        return;
-    }
-    
+    if (!confirm("Tem certeza que deseja excluir este evento? 😢")) return;
     const response = await post("deleteEvent", { id });
-    
     if (response.success) {
         alert("Evento excluído com sucesso! ✅");
-        // Recarrega o calendário para remover o destaque
-        await loadCalendar(); 
+        await loadCalendar();
     } else {
         alert("Houve um problema ao excluir o evento 😔");
     }
@@ -307,13 +282,3 @@ loadCalendar();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
