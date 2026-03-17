@@ -47,10 +47,6 @@
       justify-content: space-between;
       align-items: center;
     }
-    li.done {
-      text-decoration: line-through;
-      color: #888;
-    }
     .calendar {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
@@ -69,22 +65,33 @@
       color: white;
       font-weight: bold;
     }
-    /* Estilos para a nova lista de eventos */
-    #eventListContainer li {
-      border-bottom: 1px dashed #ffd6e7;
-      padding: 10px 5px;
-      color: #555;
-      font-size: 0.9em;
-    }
-    #eventListContainer li:last-child {
-      border-bottom: none;
-    }
-    .list-title {
+
+    /* Estilos das Listas Separadas */
+    .list-container h3 {
       color: #e75480; 
       border-bottom: 2px solid #ffd6e7; 
       padding-bottom: 5px; 
       margin-top: 25px;
       text-align: left;
+      font-size: 1.1em;
+    }
+    
+    .past-list li {
+      color: #bbb !important;
+      text-decoration: line-through;
+      border-bottom: 1px dashed #eee !important;
+    }
+    
+    .future-list li {
+      font-weight: 500;
+      border-bottom: 1px dashed #ffd6e7 !important;
+    }
+
+    .empty-msg {
+      font-size: 0.85em;
+      color: #999;
+      text-align: left;
+      padding: 10px 0;
     }
   </style>
 </head>
@@ -115,9 +122,12 @@
         <button onclick="addEvent()">Adicionar Evento</button>
     </div>
 
-    <div style="text-align: left;">
-        <h3 class="list-title">Lista de Eventos</h3>
-        <ul id="eventListContainer"></ul>
+    <div class="list-container">
+        <h3>🚀 Próximas Aventuras</h3>
+        <ul id="futureEvents" class="future-list"></ul>
+        
+        <h3>✨ Momentos Vividos</h3>
+        <ul id="pastEvents" class="past-list"></ul>
     </div>
 </div>
 
@@ -136,14 +146,15 @@ async function post(action, data={}) {
   return await res.json();
 }
 
-// LISTA DE PLANOS
+// Lógica de Planos
 async function loadItems() {
   const items = await post("getItems");
   const list = document.getElementById("itemList");
   list.innerHTML = "";
   items.forEach(item => {
     const li = document.createElement("li");
-    li.className = item.done ? "done" : "";
+    li.style.textDecoration = item.done ? "line-through" : "none";
+    li.style.color = item.done ? "#888" : "#444";
     li.innerHTML = `
       <span>${item.text}</span>
       <div>
@@ -172,7 +183,7 @@ async function deleteItem(id) {
   loadItems();
 }
 
-// AGENDA E CALENDÁRIO
+// Lógica de Agenda
 function changeMonth(delta) {
     currentDisplayDate.setMonth(currentDisplayDate.getMonth() + delta);
     loadCalendar();
@@ -227,26 +238,43 @@ async function loadCalendar() {
         calendar.appendChild(div);
     }
 
-    // ATUALIZAÇÃO DA LISTA TEXTUAL DE EVENTOS
-    const listContainer = document.getElementById("eventListContainer");
-    listContainer.innerHTML = "";
+    // ATUALIZAÇÃO DAS DUAS LISTAS
+    const futureList = document.getElementById("futureEvents");
+    const pastList = document.getElementById("pastEvents");
+    futureList.innerHTML = "";
+    pastList.innerHTML = "";
 
-    if (events.length === 0) {
-        listContainer.innerHTML = "<li>Nenhum evento marcado ainda 🌸</li>";
-    } else {
-        // Ordena por data (mais próximos primeiro)
-        events.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Ordena todos os eventos
+    events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let hasFuture = false;
+    let hasPast = false;
+
+    events.forEach(e => {
+        const eventDateObj = new Date(e.date + 'T00:00:00'); 
+        const isPast = eventDateObj < today;
+        const [y, m, day] = e.date.split('-');
         
-        events.forEach(e => {
-            const [y, m, day] = e.date.split('-');
-            const li = document.createElement("li");
-            li.innerHTML = `
-              <span><strong>${day}/${m}</strong>: ${e.title}</span>
-              <button style="padding: 2px 8px; font-size: 0.8em;" onclick="deleteEvent('${e.id}')">🗑</button>
-            `;
-            listContainer.appendChild(li);
-        });
-    }
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span><strong>${day}/${m}</strong>: ${e.title}</span>
+          <button style="padding: 2px 8px; font-size: 0.8em; background-color: ${isPast ? '#ccc' : '#e75480'}" onclick="deleteEvent('${e.id}')">🗑</button>
+        `;
+
+        if (isPast) {
+            pastList.appendChild(li);
+            hasPast = true;
+        } else {
+            futureList.appendChild(li);
+            hasFuture = true;
+        }
+    });
+
+    if (!hasFuture) futureList.innerHTML = "<div class='empty-msg'>Nenhuma aventura planejada por enquanto... ☁️</div>";
+    if (!hasPast) pastList.innerHTML = "<div class='empty-msg'>Ainda não temos memórias registradas aqui. ✨</div>";
 }
   
 async function addEvent() {
